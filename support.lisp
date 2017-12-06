@@ -24,7 +24,7 @@
   (with-slots (dcnt ucnt mark stack) o
     (print-reader o s)
     (format s "marksp ~A" (marksp o))))
-(defmethod print-object ((o reader) s)
+(defmethod print-object ((o support) s)
   (print-unreadable-object (o s :type t)
     (print-support o s))
 )

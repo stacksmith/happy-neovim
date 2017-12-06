@@ -89,10 +89,20 @@
    ;; STACK and count aggregates
    (el-handler :accessor el-handler :initform #'$HEADER)
    (dcnt     :accessor dcnt  :initform most-positive-fixnum)
-   (ucnt     :accessor dcnt  :initform 0)
+   (ucnt     :accessor ucnt  :initform 0)
    (stack    :accessor stack :initform (make-array 100 :fill-pointer 0))
    (level    :accessor level :initform 0)
-))
+   ))
+;;------------------------------------------------------------------------------
+(defun print-reader (o &optional (s t))
+  (format s " #~A[~A- ~A+] (~A)"
+	  (level o) (dcnt o) (ucnt o)
+	  (byte-handler o)))
+
+(defmethod print-object ((o reader) s)
+  (print-unreadable-object (o s :type t)
+    (print-reader o s)))
+
 ;;==============================================================================
 ;; Handle stacking for aggregate types...
 (defgeneric reader-push (reader element-count element-handler))
@@ -123,14 +133,6 @@
 	 (reader-pop reader))))
 
 
-;;------------------------------------------------------------------------------
-(defun print-reader (o &optional (s t))
-  (format s " #~A (~A)"
-	  (level o)
-	  (byte-handler o)))
-(defmethod print-object ((o reader) s)
-  (print-unreadable-object (o s :type t)
-    (print-reader o s)))
 
 ;;==============================================================================
 ;; default object handler 
