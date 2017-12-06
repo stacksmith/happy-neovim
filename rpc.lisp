@@ -96,9 +96,9 @@
   (setf (obj-handler rpc) #'oh-plan))
 
 ;;------------------------------------------------------------------------------
-(defmethod print-object ((o treader) s)
+(defmethod print-object ((o rpc) s)
   (print-unreadable-object (o s :type t)
-    (print-treader o s)
+    (print-support o s)
     (format s "~&plan:~A"  (plan o))))
 ;;------------------------------------------------------------------------------
 ;;=============================================================================

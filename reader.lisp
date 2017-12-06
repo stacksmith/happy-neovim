@@ -4,36 +4,37 @@
 ;; This is the lowest-level decoder.  This layer assembles multibyte atoms,
 ;; decodes headers, and reports kind and value information
 ;;
-;; 'KINDS', to avoid overloading the word 'type', are enumerations that stand
-;; for the messagepack types.  While the decoder provides unique KIND values,
-;; each enumeration is arranged in a manner that allows higher levels to
-;; combine them into a bitmask for typechecking.  A client may expect an int
-;; expressed as %U + %S (defined as %I for convenience).  A simple bitwise AND
-;; will check the KIND against the mask.
+;; Instead of using the highly overloaded word 'type', %KIND is used to
+;; enumerate messagepack types.  The decoder provides unique %KIND values
+;; on output, but each %KIND enumeration uses a unique bit.  Parsers use this
+;; feature to combine allowed %KINDs into a bitmask for easy typechecking.
 ;;
+;; Several synthesized (non-messagepack) %KINDS are provided:
+;; - %C is a character representing elements of a %STR aggregate;
+;; - %BYTE is a byte representing elements of a %BIN and %EXT aggregates;
+;; - %PAIR represents elements of %MAP type and always has 2 values.
+;;
+;; OBJ-HANDLER is invoked with %KIND, VALUE and AGGREGATEP parameters.
 ;; AGGREGATEP means that the KIND is a header of a multivalue type such as
 ;; an array or a string, and VALUE is the count of elements to expect.  Note
 ;; that that the count may be 0!
 ;;
-;; Messagepack MAP is processed in a different way.  The element count reported
-;; is the count of PAIR types to follow.  Each pair is an aggregate of 2
+;; Reader keeps track of a global byte count (total), and aggregate-local down
+;; counter (dcnt) and up counter (ucnt).  These are reentrant and nested when
+;; aggregate elements are also aggregates.  When dcnt decrements to 0, all
+;; elements of an aggregate had been processed, and a previous state is
+;; restored.
 ;;
-;; Messagepack's EXT is processed as follows:  the element count reported
-;; is the number of bytes +1; the first element is a signed value, while
-;; the rest are bytes.
+;; READER-PUSH and READER-POP methods are invoked to save and restore state.
+;; Derived classes may hook these methods - READER-PUSH :after
+;; READER-POP :before to store private data or perform additional actions on
+;; entry and exit of aggregates.
 ;;
-;; Each time an element is processed, DCNT (down counter) is decremented,
-;; while UCNT (up counter) is incremented.  When an aggregate header is
-;; encountered, the reader state (including counts) is saved and a clean one
-;; is introduced.  When DCNT hits zero, the previous state is popped and DCNT
-;; decremented - as many times as necessary until the state has a non-zero
-;; DCNT.
 ;;
-;; READER-PUSH and READER-POP are invoked to save and restore state.  Derived
-;; classes may hook these methods - READER-PUSH :after and READER-POP :before
-;; to save extra data or perform
+;;==============================================================================
+;; NOT YET IMPLEMENTED:
 ;;
-;; NOTE: floats are not yet implemented!
+;; floats 
 ;;
 (eval-when  (:compile-toplevel :load-toplevel :execute)
   (defparameter %ERR       #x00000)
@@ -147,23 +148,21 @@
   reader)
 
 ;;==============================================================================
-(defun output (reader kind value aggregatep)
-  (with-slots (obj-handler) reader
-    (funcall obj-handler reader kind value aggregatep)))
+;; OUTPUT
+
 ;;------------------------------------------------------------------------------
 ;; Simple output for non-aggregates
 (defun out-simple (reader kind value)
-  (with-slots (byte-handler el-handler dcnt ucnt) reader
-    (output reader kind value nil)
+  (with-slots (byte-handler el-handler obj-handler ) reader
+    (funcall obj-handler reader kind value nil)
     (reader-multipop reader)
-    (setf byte-handler el-handler))
-  )
+    (setf byte-handler el-handler)))
 
 ;;------------------------------------------------------------------------------
 ;; output an aggregate header.
 (defun out-agg (reader kind size eldec)
-  (output reader kind size t) ;; process the aggregate header
-  (with-slots (byte-handler el-handler dcnt) reader
+  (with-slots (byte-handler el-handler obj-handler) reader
+    (funcall obj-handler reader kind size t)
     (if (zerop size)
 	(reader-multipop reader)
 	(reader-push reader size eldec))

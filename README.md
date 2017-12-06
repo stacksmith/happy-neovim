@@ -66,21 +66,27 @@ Note: some screen noise omitted for brevity.
 
 The state machine parser is a set of layered classes that create a parser for a protocol described with a lisp-like description language.  The plan is a sexp where each element is either an expected %TYPE/value, or a list of alternative %TYPES/values.  In addition, keyword side effects capture values into parameters, call functions, and provide looping contstructs.
 
-
+This is a top-level plan for neovim RPC:
 ```
 (parse-plan
-   '(:LOOP
-     (%ARR 
-      ;; RESPONSE: 1 <id> <error> <data>
-      (4 %U 1 %U * :VAR 1  %ANY * :VAR 2 %ANY * :VAR 3  :FUN (RESPONSE  1 2 3))
-      ;; REDRAW    2 "redraw" <var data array>
+   '(:LOOP   
+     (%ARR   ;; expecing an array
+      (4                       ;; in case of 4 elements,
+	   %U 1                    ;; unsigned value 1, (RESPONSE)
+	   %U * :VAR 1             ;; any unsigned value (ID) stored in param 1
+	   %ANY * :VAR 2           ;; any type value (ERROR) stored in param 2
+	   %ANY * :VAR 3           ;; any type value (DATA) stored in param 3
+	   :FUN (RESPONSE  1 2 3)) ;; call function #'response with params
+	  ;;
+	  ;; Array of 3 elements, first is unsigned 2 - is a redraw message.
       (3 %U 2  :STRINGS ("redraw" %ARR * :GOTO *plan-redraw*))))))
 ```
 
+The parser uses the plan to match incoming bytes against expected values without any consing.  For more details, see rpc.lisp, plan.lisp and captive-neovim.lisp.  
+
 ## Hacking it
 
-Messagepack bytes are assembled into atomic values and headers.  Lambda stored in OBJ-HANDLER slot is called when a %TYPE/VALUE pair is assembled.  For atomic data it is just type and value; for headers the value represents the count of items to follow.
-
+Messagepack bytes are assembled into atomic values and headers; each incoming byte is processed by the lambda in slot BYTE-HANDLER.  State-machine type decoders process each byte and plug in the next decoder into the BYTE-HANDLER slot  When an entire value is assembled, lambda stored in OBJ-HANDLER slot is called with the decoded %KIND and VALUE.   For aggregates, the data sent is aggregate %KIND and the count of items to follow. 
 
 
 Each file provide detailed comments about its functionality.
