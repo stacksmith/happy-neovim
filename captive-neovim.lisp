@@ -105,6 +105,7 @@
       ("put"       :LOOP %ARR 1 %STR * :UTF8 %C * :VAR 1 :FUN (put 1))
       ("highlight_set" %ARR 1 :GOTO *plan-hls*))
      (* :STRINGS
+      ("mode_change" :LOOP  %ARR *  %STR * :STR 1 %U * :VAR 2 :FUN (mode-change 2))
       ("put"       :LOOP %ARR 1 %STR * %C * :VAR 2 :FUN (put 2))
       ("highlight_set" %ARR 1 %MAP 0 %ARR 1 :GOTO *plan-hls*)
       ("set_scroll_region" %U * :VAR 1  %U * :VAR 2 %U * :VAR 3 %U * :VAR 4
@@ -317,7 +318,7 @@
 ;;
 (defun vimbyte (&optional (vim *v*))
   (let ((byte (read-byte (slurp vim) )))
-    (format t "~A: ~02X  " (total vim) byte) ;;(if (< byte 128)		(code-char byte)  #\.)
+    (format t "~A: ~02X ~A" (total vim) byte (code-char byte)) ;;(if (< byte 128)		(code-char byte)  #\.)
 	    
     (decode vim byte)
     vim)
