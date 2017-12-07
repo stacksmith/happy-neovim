@@ -265,7 +265,7 @@
 ;;
 (defun put (obj value)
   (with-slots (x y buf) obj
-    (setf (aref  (aref buf y) x) (code-char value))
+    (setf (aref  (aref buf y) x) value)
     (incf x)))
 ;;==============================================================================
 ;; TODO

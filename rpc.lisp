@@ -112,12 +112,8 @@
  ;;     (format t "~&PLAN ran on ~X ~X~&" kind value )
       (setf plan mark))
     (case kind
-      (#.%C       
-       (if utf8-mode
-	   (if (< value 128)	  
-	       (on-val parser value)
-	       (utf8-first parser value))
-	   (on-val parser value)))
+      (#.%C
+       (on-val parser (code-char value)))
       (#.%str
        (setf utf8-mode nil)
        (on-kind parser kind) 

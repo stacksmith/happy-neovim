@@ -50,9 +50,7 @@
   (let ((p prev))
     (setf p (parse-maybe-make p (length string)))
     (loop for char across string
-       do
-	 (foreach-utf8-byte 
-	  char (lambda (byte) (setf p (parse-maybe-make p byte)))))
+       do (setf p (parse-maybe-make p char)))
     (setf (cdr p) (parse-plan-kind data ))) 
   prev )
 
@@ -115,7 +113,7 @@
          (3 %S 2))
      (%S 3)
      )))
-
+#||
 (defun foreach-utf8-byte (char fun)
   (let ((c (char-code char)))
     (cond
@@ -134,4 +132,4 @@
        (funcall fun (+ #x80 (ldb (byte 6 0) c))))
       (t (error "Illegal UTF8 character ~X" c)))))
 
-
+||#
