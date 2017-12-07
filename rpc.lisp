@@ -32,13 +32,10 @@
 ;;                       as shown.  Note that for strings and BINs, values
 ;;                       are listed without types (as character is implied).
 ;;
-;; In reality, numeric values that stand for kinds and characters must be used.
-;; Since quoted lists are not evaluated, you must enter kinds as reader-
+;;;; Since quoted lists are not evaluated, you must enter kinds as reader-
 ;; evaluated objects, i.e. #.%U and #.%ARR - or use the convenience parser in
 ;; plan.lisp,
 ;;
-;; Characters must be converted to their UTF8 byte equivalents and matched
-;; a byte at a time.  plan.lisp takes care of that.
 ;;
 ;; In addition, certain keyword parameters may be used to indicate side
 ;; effects, such as capturing values, calling functions, and control transfer.
@@ -54,8 +51,7 @@
 ;;           parameters may be one of
 ;;           - integer indices, requesting current values of collected variables
 ;;           - anything else, which will be passed to the function.
-;; Note: index 0 is used as a counter for aggregate values (in some cases).
-;;
+;;   :INDEX i causes the value of the current loop index to be captured
 ;; - :LOOP   placed after an aggregate object declaration, causes the :LOOP
 ;;           location to be stored for future use.  The rest of the plan is
 ;;           followed as usual.  At runtime, should the plan run off the end
@@ -79,10 +75,6 @@
 (defclass rpc (support)
   ((param :accessor param :initform (make-array 64))
    (plan    :accessor plan    :initform nil :initarg :plan)
-   ;; we assemble UTF8 characters here.
-   (utf8-mode :accessor utf8-mode :initform nil) ;when t, do UTF8
-   (utf8-rem :accessor utf8-rem :initform 0);remaining UTF8 bytes
-   (utf8-acc :accessor utf8-acc :initform 0);accumulated code
    ;; string-builder accumulates strings here:
    (str      :accessor str :initform nil)
    ;; The handler may be switched for more specific work, to wit: strings.
@@ -114,41 +106,12 @@
     (case kind
       (#.%C
        (on-val parser (code-char value)))
-      (#.%str
-       (setf utf8-mode nil)
-       (on-kind parser kind) 
-       (on-val parser  value))
       (t
        (progn
 	 (on-kind parser kind) 
 	 (on-val parser  value))))))
 
-;; Process first byte of a utf8 character
-(defun utf8-first (parser value)
-  (with-slots (obj-handler utf8-rem utf8-acc) parser
-    (multiple-value-setq (utf8-rem utf8-acc)
-      (cond
-	((< value 128) (values 0 value) )
-	((= #b110   (ldb (byte 3 5) value)) (values 1 (logand #x1F value)))
-	((= #b1110  (ldb (byte 4 4) value)) (values 2 (logand #x0F value)))
-	((= #b11110 (ldb (byte 5 3) value)) (values 3 (logand #x07 value)))
-	(t (error "Unexpected first UTF8 byte ~X" value))))
-    (setf obj-handler #'oh-utf8)))
 
-(defun oh-utf8 (parser kind value agg)
-  (with-slots (obj-handler utf8-rem utf8-acc) parser
-    (if (and (= %C kind)
-	     (= #b10000000 (logand #xC0 value)))
-	(progn
-	  (setf utf8-acc (+ (ash utf8-acc 6) (logand #x3F value)))
-;;	  (format t "UTF8 byte ~A; UTF8-ACC NOW ~A~&" value utf8-acc)
-	  (if (zerop (decf utf8-rem))
-	      (progn
-		(setf obj-handler #'oh-plan)
-		(on-val parser utf8-acc))))
-	(progn
-	  (setf obj-handler #'oh-plan)
-	  (error "Unexpected data ~X ~X in UTF8 sequence" kind value)))))
 ;;=============================================================================
 ;; RUN-TIME INTERPRETER
 ;;
@@ -213,7 +176,7 @@
   ;; Process actual value position
 ;;  (format t "on-val ~A~&" val)
 
-  (with-slots (param plan utf8-mode) parser
+  (with-slots (param plan) parser
     (let ((car-plan (car plan)))
       (setf plan
 	    (cdr ;; in every case we advance to next element
@@ -255,10 +218,7 @@
 		       (:LOOP (setf done t);;stop here and reparse :LOOP
 			      plan)        ;; as a KIND...
 		       (:GOTO (symbol-value parm)) ;; simple
-		       (:UTF8 (setf utf8-mode t)
-			      (cdr plan))
 		       (:STR (install-string-builder parser val parm)
-			     (setf utf8-mode t)
 			     (cddr plan)) ;; shows off a custom handler
 
 		       (t (error "Unexpected keyword ~A" car-plan))))))))

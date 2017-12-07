@@ -30,6 +30,8 @@
 ;; READER-POP :before to store private data or perform additional actions on
 ;; entry and exit of aggregates.
 ;;
+;; UTF8 characters are assembled and reported as integers.  STR size is a byte
+;; count actual character count may be smaller if multibyte characters are used.
 ;;
 ;;==============================================================================
 ;; NOT YET IMPLEMENTED:
@@ -281,8 +283,7 @@
 	  (unless (plusp (decf dcnt bytes))
 	    (error "UTF8: not enough bytes for byte ~X: need ~A have ~A"
 		   value bytes (+ dcnt bytes)))
-	  (setf byte-handler #'$UTF8-REST)
-	  ()))))
+	  (setf byte-handler #'$UTF8-REST)))))
 
 (defun $UTF8-REST (reader value)
   (with-slots (dcnt bytes val) reader
