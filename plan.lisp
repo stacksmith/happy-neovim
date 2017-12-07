@@ -23,9 +23,6 @@
 ;; strings by hand and counting characters.  However the neovim crew managed
 ;; to screw up the put highlight_set to require manual intervention...
 ;;
-;; Update: UTF8 characters are broken into constituent bytes.  Matching
-;; happens on byte-by-byte level, not character-by-character, to be
-;; consistent with MessagePack string lengths being byte lengths!
 
 (defparameter *labels* nil)
 ;;-----------------------------------------------------------------------------
