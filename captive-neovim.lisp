@@ -102,7 +102,7 @@
        :GOTO *plan-mis*)
       ("mode_change" %ARR 2 %STR * :STR 1 %U * :VAR 2 :FUN (mode-change 2))
       ;; Yes, variable-size commands featuring idiocy!  Duplicated
-      ("put"       :LOOP %ARR 1 %STR * :UTF8 %C * :VAR 1 :FUN (put 1))
+      ("put"       :LOOP %ARR 1 %STR * %C * :VAR 1 :FUN (put 1))
       ("highlight_set" %ARR 1 :GOTO *plan-hls*))
      (* :STRINGS
       ("mode_change" :LOOP  %ARR *  %STR * :STR 1 %U * :VAR 2 :FUN (mode-change 2))

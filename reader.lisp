@@ -266,8 +266,33 @@
   (accumulate reader cntbytes #'$ACC #'$STR0))
 
 ;;==============================================================================
+;;(defun $CHAR (reader value)  (out-simple reader %C value))
 (defun $CHAR (reader value)
-  (out-simple reader %C value))
+  (with-slots (byte-handler dcnt bytes val) reader
+    (if (< value 128)
+	(out-simple reader %C value)
+	(progn
+	  (multiple-value-setq (bytes val)
+	    (cond
+	      ((= #b110   (ldb (byte 3 5) value)) (values 1 (logand #x1F value)))
+	      ((= #b1110  (ldb (byte 4 4) value)) (values 2 (logand #x0F value)))
+	      ((= #b11110 (ldb (byte 5 3) value)) (values 3 (logand #x07 value)))
+	      (t (error "Unexpected first UTF8 byte ~X" value))))
+	  (unless (plusp (decf dcnt bytes))
+	    (error "UTF8: not enough bytes for byte ~X: need ~A have ~A"
+		   value bytes (+ dcnt bytes)))
+	  (setf byte-handler #'$UTF8-REST)
+	  ()))))
+
+(defun $UTF8-REST (reader value)
+  (with-slots (dcnt bytes val) reader
+    (unless (= #b10000000 (logand #xC0 value))
+      (error "UTF8: broken byte ~X in UTF8 sequence" value))
+    (setf val (+ (ash val 6) (logand #x3F value)))
+    ;;	  (format t "UTF8 byte ~A; UTF8-ACC NOW ~A~&" value utf8-acc)
+    (if (zerop (decf bytes))
+	(out-simple reader %C val)
+	(decf dcnt))))
 
 ;;==============================================================================
 ;; ERR
