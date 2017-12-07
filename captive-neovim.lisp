@@ -105,6 +105,8 @@
       ("put"       :LOOP %ARR 1 %STR * %C * :VAR 1 :FUN (put 1))
       ("highlight_set" %ARR 1 :GOTO *plan-hls*))
      (* :STRINGS
+      ("busy_on" (:FUN (busy 't)))
+      ("busy_off" (:FUN (busy 'nil)))
       ("mode_change" :LOOP  %ARR *  %STR * :STR 1 %U * :VAR 2 :FUN (mode-change 2))
       ("put"       :LOOP %ARR 1 %STR * %C * :VAR 2 :FUN (put 2))
       ("highlight_set" %ARR 1 %MAP 0 %ARR 1 :GOTO *plan-hls*)
@@ -280,6 +282,8 @@
       (if it (setf (cdr it) value)
 	  (push (cons type value) highlight)))))
 
+(defun busy (which)
+  (format t "BUSY: ~A ~A~&" which (type-of which)))
 ;;------------------------------------------------------------------------------
 ;;
 ;; start command header, optionally requesting a when-done callback (if error
