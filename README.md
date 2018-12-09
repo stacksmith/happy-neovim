@@ -1,4 +1,10 @@
 # HAPPY-NEOVIM
+## Abandoned due to asinine and argumentative behavior of NeoVIM maintainers
+See https://github.com/neovim/neovim/issues/7723
+
+Who needs this kind of bullshit?  It's less work to write my own fucking editor.  You can lead a horse to drink, but you can't get it to water.
+
+Too bad: messagepack is a pretty good protocol, and my state-machine parser was beautiful.
 
 ## Summary:
 
